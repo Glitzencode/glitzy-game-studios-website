@@ -13,7 +13,7 @@ app.use((_req, res, next) => {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'X-Frame-Options': 'DENY',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://echoes-of-history-production.up.railway.app; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
   });
   next();
 });
