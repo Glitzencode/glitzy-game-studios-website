@@ -1,4 +1,5 @@
 export const BETA_URL = 'https://echoes-of-history-production.up.railway.app/';
+export const INVITE_REQUEST_URL = `${BETA_URL}api/invite-request`;
 
 export type Game = {
   slug: string;

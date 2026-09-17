@@ -1,6 +1,6 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties, type FormEvent } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Compass, ExternalLink, Menu, Plus, Sparkles, X } from 'lucide-react';
-import { BETA_URL, games, normalizePath, type Game } from './content';
+import { BETA_URL, INVITE_REQUEST_URL, games, normalizePath, type Game } from './content';
 
 type ArtProps = { name: string; alt: string; className?: string; eager?: boolean; sizes?: string };
 function Art({ name, alt, className = '', eager = false, sizes = '(max-width: 700px) 100vw, 50vw' }: ArtProps) {
@@ -87,15 +87,73 @@ function GamePage({ game }: { game: Game }) {
   </div>;
 }
 
+type InviteStatus = '' | 'pending' | 'already_pending' | 'already_approved';
+
+function InviteRequestForm() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState<InviteStatus>('');
+  const ready = name.trim().length > 0 && email.includes('@');
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!ready || loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(INVITE_REQUEST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), reason: reason.trim() }),
+      });
+      const json = await res.json();
+      if (!json.success) { setError(json.error ?? 'Something went wrong. Please try again.'); return; }
+      setStatus((json.message as InviteStatus) || 'pending');
+    } catch {
+      setError('Could not reach the Archive. Please try again in a moment.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (status) {
+    const message = status === 'already_approved'
+      ? 'Your request was already approved — check your email for your invite code.'
+      : status === 'already_pending'
+      ? 'Your request is already being reviewed. You’ll receive an email when it’s approved.'
+      : 'Your request has been received. You’ll get an email with your invite code once approved — usually within 24 hours.';
+    return <div className="invite-form-result"><span className="tiny-star">✳</span><p>{message}</p></div>;
+  }
+
+  return <form className="invite-form" onSubmit={handleSubmit}>
+    <div className="field-row">
+      <div className="field-group"><label htmlFor="invite-name">Name</label><input id="invite-name" type="text" placeholder="Your name…" value={name} maxLength={50} onChange={e => setName(e.target.value)} required /></div>
+      <div className="field-group"><label htmlFor="invite-email">Email</label><input id="invite-email" type="email" placeholder="Your email address…" value={email} onChange={e => setEmail(e.target.value)} required /></div>
+    </div>
+    <div className="field-group"><label htmlFor="invite-reason">Why do you want to join? <span className="field-optional">— optional</span></label><textarea id="invite-reason" placeholder="Tell us a little about yourself…" value={reason} maxLength={500} rows={3} onChange={e => setReason(e.target.value)} /></div>
+    {error && <p className="form-error">{error}</p>}
+    <button className="button button-gold" type="submit" disabled={!ready || loading}>{loading ? 'Sending…' : '✦ Request Access'}</button>
+  </form>;
+}
+
+function InviteRequestSection() {
+  return <section id="request-invite" className="invite-request wrap"><div className="section-heading"><div><Eyebrow>Need access?</Eyebrow><h2>Request an<br />invite code.</h2></div><p>Tell us a little about yourself. We review requests and email an invite code once approved — usually within 24 hours.</p></div><div className="invite-form-card"><InviteRequestForm /></div></section>;
+}
+
 function BetaPage() {
   return <><section className="beta-page-hero"><Art className="beta-page-art" name="echoes-archive" alt={games[0].secondaryAlt} eager sizes="100vw" /><div className="beta-page-shade" /><div className="wrap beta-page-content"><span className="badge"><span className="live-dot" /> Echoes of History / Beta</span><h1>The Archive<br />is <em>waiting.</em></h1><p>Enter the Archive, speak with history, and see what echoes back. Your journey starts in the Echoes web app.</p><a className="button button-gold" href={BETA_URL}>Open Echoes of History <ArrowUpRight size={18} /></a><span className="microcopy">Browser-based · Existing players can sign in</span></div></section>
-    <section className="beta-guide wrap"><div className="section-heading"><div><Eyebrow>Before you step inside</Eyebrow><h2>A small guide to getting started.</h2></div><p>The beta uses the existing Echoes account<br />and invitation system.</p></div><div className="steps"><article><span className="step-number">01</span><h3>Open the Archive</h3><p>Follow the Play Beta link to the live Echoes app. There’s nothing to download.</p><ExternalLink size={22} /></article><article><span className="step-number">02</span><h3>Bring your invitation</h3><p>Already have an account? Sign in. New players need an invite code to register. Use the app’s invitation request flow if you need one.</p><Compass size={22} /></article><article><span className="step-number">03</span><h3>Follow your curiosity</h3><p>Enter the Archive, meet the Resonances, and begin a conversation. This is a beta, so the experience is still evolving.</p><Sparkles size={22} /></article></div></section>
+    <section className="beta-guide wrap"><div className="section-heading"><div><Eyebrow>Before you step inside</Eyebrow><h2>A small guide to getting started.</h2></div><p>The beta uses the existing Echoes account<br />and invitation system.</p></div><div className="steps"><article><span className="step-number">01</span><h3>Open the Archive</h3><p>Follow the Play Beta link to the live Echoes app. There’s nothing to download.</p><ExternalLink size={22} /></article><article><span className="step-number">02</span><h3>Bring your invitation</h3><p>Already have an account? Sign in. New players need an invite code to register — <a className="text-link" href="#request-invite">request one below <ArrowRight size={14} /></a> if you don’t have one yet.</p><Compass size={22} /></article><article><span className="step-number">03</span><h3>Follow your curiosity</h3><p>Enter the Archive, meet the Resonances, and begin a conversation. This is a beta, so the experience is still evolving.</p><Sparkles size={22} /></article></div></section>
+    <InviteRequestSection />
     <section className="faq-section wrap"><div><Eyebrow>A few useful answers</Eyebrow><h2>Before your<br />first echo.</h2><a className="text-link" href="/games/echoes-of-history/">Explore the game <ArrowUpRight size={17} /></a></div><div className="faq-list">{[
-      ['Can I play right now?', 'Existing players can open Echoes and sign in. New accounts require a beta invite code. The app has an invitation request flow; receiving access is not automatic.'],
+      ['Can I play right now?', 'Existing players can open Echoes and sign in. New accounts require a beta invite code. Use the request form on this page; receiving access is not automatic.'],
       ['Do I need a separate studio account?', 'No. The studio website links you directly to Echoes, where you use your existing game account.'],
       ['Does it run in my browser?', 'Yes. Echoes is a web app. Open it in an up-to-date browser. Device-specific support and performance may vary during the beta.'],
       ['Why does the Play button open a Railway address?', 'That is the current live home of Echoes of History. Your gameplay and account stay in the existing app.'],
       ['Where do my conversations go?', 'Gameplay is powered by AI, and messages are processed by the game’s backend and AI provider. Review the notices and terms shown in Echoes before entering personal information. This studio website does not collect your conversations.'],
+      ['What happens to the info in the invite request form?', 'Your name, email, and optional message are sent straight to the Echoes of History backend for review — the same system the app’s own request flow uses. This studio website doesn’t store or see that data itself.'],
     ].map(([question, answer]) => <details key={question}><summary>{question}<Plus size={18} /></summary><p>{answer}</p></details>)}</div></section>
   </>;
 }
@@ -105,7 +163,7 @@ function StudioPage() {
 }
 
 function PrivacyPage() {
-  return <section className="legal-page wrap"><Eyebrow>Website information</Eyebrow><h1>Your visit.<br /><em>Your privacy.</em></h1><div className="legal-copy"><h2>The studio website</h2><p>This website showcases Glitzy Game Studios and its games. It does not ask you to create an account, submit personal information, or enter a conversation. This version does not include analytics scripts, advertising trackers, or newsletter forms.</p><h2>Hosting and browser requests</h2><p>Like other websites, loading pages and images sends technical information such as your IP address and browser details to the hosting provider. The provider may keep operational logs. Images and fonts are served with the website.</p><h2>The Echoes of History beta</h2><p>Play Beta links take you to the separate Echoes application. Its accounts, invitations, conversations, and AI processing are handled by that app. Review its terms and privacy information before registering or sharing information. This page describes the studio website only.</p><h2>Changes</h2><p>If the studio website adds forms or analytics, this information will be updated to describe them.</p></div></section>;
+  return <section className="legal-page wrap"><Eyebrow>Website information</Eyebrow><h1>Your visit.<br /><em>Your privacy.</em></h1><div className="legal-copy"><h2>The studio website</h2><p>This website showcases Glitzy Game Studios and its games. Browsing it does not require an account or a conversation. The only information you can submit here is through the invite-code request form described below. This site does not include analytics scripts, advertising trackers, or newsletter forms.</p><h2>Requesting an invite code</h2><p>The beta page includes a form for requesting an invite code to Echoes of History. Submitting it sends your name, email address, and anything you choose to write in the optional message directly to the Echoes of History backend — the same system used by the app’s own invitation request flow. That information is reviewed by the Echoes of History team to approve access and email you an invite code. This studio website does not store that submission or use it for any other purpose. Review the Echoes of History app’s own privacy information for how it handles that data.</p><h2>Hosting and browser requests</h2><p>Like other websites, loading pages and images sends technical information such as your IP address and browser details to the hosting provider. The provider may keep operational logs. Images and fonts are served with the website.</p><h2>The Echoes of History beta</h2><p>Play Beta links take you to the separate Echoes application. Its accounts, invitations, conversations, and AI processing are handled by that app. Review its terms and privacy information before registering or sharing information. This page describes the studio website only.</p><h2>Changes</h2><p>If the studio website adds new forms or analytics, this information will be updated to describe them.</p></div></section>;
 }
 
 function NotFound() {
