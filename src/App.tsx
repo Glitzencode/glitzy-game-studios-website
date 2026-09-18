@@ -87,7 +87,7 @@ function GamePage({ game }: { game: Game }) {
   </div>;
 }
 
-type InviteStatus = '' | 'pending' | 'already_pending' | 'already_approved';
+type InviteStatus = '' | 'sent' | 'already_used' | 'rejected';
 
 function InviteRequestForm() {
   const [name, setName] = useState('');
@@ -111,7 +111,7 @@ function InviteRequestForm() {
       });
       const json = await res.json();
       if (!json.success) { setError(json.error ?? 'Something went wrong. Please try again.'); return; }
-      setStatus((json.message as InviteStatus) || 'pending');
+      setStatus((json.message as InviteStatus) || 'sent');
     } catch {
       setError('Could not reach the Archive. Please try again in a moment.');
     } finally {
@@ -120,11 +120,11 @@ function InviteRequestForm() {
   };
 
   if (status) {
-    const message = status === 'already_approved'
-      ? 'Your request was already approved — check your email for your invite code.'
-      : status === 'already_pending'
-      ? 'Your request is already being reviewed. You’ll receive an email when it’s approved.'
-      : 'Your request has been received. You’ll get an email with your invite code once approved — usually within 24 hours.';
+    const message = status === 'already_used'
+      ? 'An invite code was already sent to this email and has been used. If you already have an account, try signing in from the Echoes app instead.'
+      : status === 'rejected'
+      ? 'This request was not approved. If you think this is a mistake, please reach out.'
+      : 'Your invite code has been sent! Check your email — it should arrive within a few minutes.';
     return <div className="invite-form-result"><span className="tiny-star">✳</span><p>{message}</p></div>;
   }
 
@@ -140,7 +140,7 @@ function InviteRequestForm() {
 }
 
 function InviteRequestSection() {
-  return <section id="request-invite" className="invite-request wrap"><div className="section-heading"><div><Eyebrow>Need access?</Eyebrow><h2>Request an<br />invite code.</h2></div><p>Tell us a little about yourself. We review requests and email an invite code once approved — usually within 24 hours.</p></div><div className="invite-form-card"><InviteRequestForm /></div></section>;
+  return <section id="request-invite" className="invite-request wrap"><div className="section-heading"><div><Eyebrow>Need access?</Eyebrow><h2>Request an<br />invite code.</h2></div><p>Tell us a little about yourself. We’ll email you an invite code right away.</p></div><div className="invite-form-card"><InviteRequestForm /></div></section>;
 }
 
 function BetaPage() {
